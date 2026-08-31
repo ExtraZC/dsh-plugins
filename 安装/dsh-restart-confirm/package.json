@@ -1,0 +1,38 @@
+{
+  "name": "dsh-restart-confirm",
+  "version": "0.1.0",
+  "description": "Confirmation bar before the automatic dsh web restart: after a plugin install changes the profile, the page asks the user to restart now or defer, instead of disconnecting instantly.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "restart",
+    "confirm"
+  ],
+  "files": [
+    "src/",
+    "cordis.patch.yml"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ],
+      "platform": "web"
+    }
+  }
+}

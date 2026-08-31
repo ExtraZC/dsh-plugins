@@ -1,0 +1,13 @@
+[Unit]
+Description=Restart DSH web service after plugin install (with UI confirmation)
+After=dsh-web.service
+
+[Service]
+Type=oneshot
+# The helper may wait up to 3 minutes for the user's answer; keep systemd
+# from killing it at the default 90s start timeout.
+TimeoutStartSec=330
+ExecStart=/home/extraz/.dsh/scripts/restart-with-confirm.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,6 @@
+# dsh-restart-confirm bundle layer: confirmation bar before the automatic
+# post-plugin-install restart of the dsh web service. The row id stays stable
+# so re-adds and profile patches can target it.
+- insert:
+    - id: restart-confirm
+      name: dsh-restart-confirm
