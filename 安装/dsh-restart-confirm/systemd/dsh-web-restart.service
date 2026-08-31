@@ -7,7 +7,9 @@ Type=oneshot
 # The helper may wait up to 3 minutes for the user's answer; keep systemd
 # from killing it at the default 90s start timeout.
 TimeoutStartSec=330
-ExecStart=/home/extraz/.dsh/scripts/restart-with-confirm.sh
+# <dsh-user> is a placeholder: substitute the real user name before
+# installing (INSTALL.md does: sed 's|<dsh-user>|$U|g').
+ExecStart=/home/<dsh-user>/.dsh/scripts/restart-with-confirm.sh
 
 [Install]
 WantedBy=multi-user.target
