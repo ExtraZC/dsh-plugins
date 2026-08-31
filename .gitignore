@@ -99,6 +99,9 @@ web-auth.json
 .tools/
 .gh-config/
 
+# Nested standalone repos
+dsh-scripts/
+
 # Personal / sensitive documents
 *身份证*
 *手机号*
