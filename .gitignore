@@ -95,6 +95,10 @@ dsh-settings.yaml
 dsh-settings.*.yaml
 web-auth.json
 
+# Local tooling & gh CLI auth (contains GitHub OAuth token)
+.tools/
+.gh-config/
+
 # Personal / sensitive documents
 *身份证*
 *手机号*

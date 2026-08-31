@@ -15,7 +15,7 @@ U=${SUDO_USER:-$USER}
 sudo cp /etc/systemd/system/dsh-web-restart.service /etc/systemd/system/dsh-web-restart.service.bak
 TMP=$(mktemp)
 sed "s|<dsh-user>|$U|g" \
-  "/home/$U/DSH/安装/dsh-restart-confirm/systemd/dsh-web-restart.service" > "$TMP"
+  "/home/$U/DSH/dsh-restart-confirm/systemd/dsh-web-restart.service" > "$TMP"
 sudo install -m 644 "$TMP" /etc/systemd/system/dsh-web-restart.service
 rm -f "$TMP"
 
