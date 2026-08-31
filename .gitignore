@@ -21,6 +21,84 @@ Thumbs.db
 .vscode/
 *.swp
 
-# Env
+# ── Sensitive: env / API keys / personal data ────────────────────────
+# Environment files (may hold model API keys); keep .env.example
 .env
-.env.local
+.env.*
+*.env
+*.env.*
+!.env.example
+!.env.example.*
+
+# Local-only overrides (may embed secrets)
+*.local
+*.local.*
+local.*
+config.local.*
+settings.local.*
+config.dev.*
+config.prod.*
+
+# Registry / credential auth files
+.netrc
+.npmrc
+.yarnrc
+.yarnrc.yml
+.pypirc
+.git-credentials
+.git-credentials.*
+
+# Generic credentials / secrets / tokens / passwords
+credentials*
+secrets*
+secret.*
+*credential*
+*credentials*
+*secret*
+*token*
+*password*
+*passwd*
+*.htpasswd
+!*tokenizer*
+!*tokenize*
+
+# API keys
+*apiKey*
+*api-key*
+*api_key*
+*apikey*
+*api.key
+*api-keys.json
+
+# Private keys / certificates / wallets / vaults
+*.key
+*.pem
+*.crt
+*.cer
+*.der
+*.p12
+*.pfx
+*.asc
+*.gpg
+*.kdbx
+*.ovpn
+*.ppk
+id_rsa
+id_rsa*
+id_ed25519
+id_ed25519*
+
+# DSH local config (may contain model API keys / web auth tokens)
+.dsh/
+.config/dsh/
+dsh-settings.yaml
+dsh-settings.*.yaml
+web-auth.json
+
+# Personal / sensitive documents
+*身份证*
+*手机号*
+*通讯录*
+*个人信息*
+*私密*
+*机密*
