@@ -1,0 +1,58 @@
+# ==============================================================================
+# .gitleaks.toml — gitleaks v8 配置（可选增强）
+#
+# 说明：本仓库的 .githooks/pre-commit 是零依赖主防线；
+#       若本机安装了 gitleaks（https://github.com/gitleaks/gitleaks），
+#       钩子会自动读取本文件并叠加第二道扫描。
+#
+# 手动使用：
+#   gitleaks git --staged  --config .gitleaks.toml --redact -v
+#   gitleaks detect --source . --config .gitleaks.toml --redact -v   # 全历史审计
+# ==============================================================================
+
+title = "DSH workspace secret rules"
+
+# 继承 gitleaks 官方 160+ 条内置规则（AWS/GCP/Azure/Slack/Stripe/私钥等）
+[extend]
+useDefault = true
+
+# ------------------------------------------------------------------------------
+# 自定义规则：捕获「变量名像密钥 + 值够随机」的通用赋值
+# ------------------------------------------------------------------------------
+[[rules]]
+id = "dsh-generic-secret-assignment"
+description = "通用密钥赋值（api_key/secret/token/password 等字面量赋值）"
+regex = '''(?i)(api[_-]?key|apikey|secret|token|passwd|password|passphrase|credential|private[_-]?key|access[_-]?key|client[_-]?secret|auth[_-]?token)["']?\s*[:=]\s*["']([^"'\s]{12,})["']'''
+secretGroup = 2
+entropy = 3.2
+keywords = ["key", "secret", "token", "password", "passwd", "credential"]
+
+[[rules]]
+id = "dsh-private-key-block"
+description = "PEM 私钥块"
+regex = '''-----BEGIN [A-Z ]*PRIVATE KEY-----'''
+
+# ------------------------------------------------------------------------------
+# 全局豁免
+# ------------------------------------------------------------------------------
+[allowlist]
+description = "全局豁免：扫描器自身、忽略目录、模板文件、占位符"
+paths = [
+  '''^\.githooks/''',
+  '''^\.gitleaks\.toml$''',
+  '''^\.gitignore$''',
+  '''(^|/)node_modules/''',
+  '''^Software/\.tooling/''',
+  '''\.(example|sample|template|dist)$''',
+]
+regexes = [
+  '''(?i)(example|placeholder|change[_-]?me|redacted|dummy|fake|sample|your[_-]?(api|key|token|secret)|xxxx+)''',
+  '''(?i)(authorization|x-api-key)["']?\s*[:=]\s*["']?(bearer\s+)?(<|\$\{|\$\(|%s|\*{3,})''',
+]
+stopwords = [
+  "example",
+  "placeholder",
+  "changeme",
+  "redacted",
+  "dummy",
+]

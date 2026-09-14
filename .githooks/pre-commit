@@ -1,0 +1,275 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# .githooks/pre-commit  —  提交前密钥 / 凭据 / 敏感信息拦截
+#
+# 设计要点
+#   1. 零外部依赖：只用 bash + git + awk（扫描核心见同目录 scan.awk）。
+#   2. 安装了 gitleaks 时自动叠加第二道扫描（读取仓库根的 .gitleaks.toml）。
+#   3. 只扫描「本次提交新增的行」；--scan-all 可扫描所有已跟踪文件。
+#   4. 输出一律脱敏：只显示前 4 个字符和长度，密钥本体永不回显。
+#   5. 误报通过 .githooks/allowlist.txt 精确豁免，而不是整体关掉扫描。
+#
+# 用法
+#   .githooks/pre-commit                 提交时自动运行
+#   .githooks/pre-commit --scan-all      扫描全部已跟踪文件
+#   SKIP_SECRET_SCAN=1 git commit ...    仅本次跳过（会打印醒目警告）
+#
+# 退出码：0 = 通过，1 = 命中疑似密钥（提交被阻止），2 = 脚本自身错误
+# ==============================================================================
+set -uo pipefail
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+  echo "pre-commit: 不在 git 仓库内，跳过。" >&2
+  exit 0
+}
+cd "$ROOT" || exit 0
+
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCAN_AWK="$HOOK_DIR/scan.awk"
+ALLOWLIST_FILE="$HOOK_DIR/allowlist.txt"
+GITLEAKS_CONFIG="$ROOT/.gitleaks.toml"
+ENTROPY_MIN="${SECRET_SCAN_ENTROPY:-3.2}"
+
+SCAN_ALL=0
+[[ "${1:-}" == "--scan-all" ]] && SCAN_ALL=1
+
+if [[ ! -f "$SCAN_AWK" ]]; then
+  echo "pre-commit: 缺少扫描核心 $SCAN_AWK，已跳过（请重新 clone 或恢复该文件）。" >&2
+  exit 0
+fi
+
+if [[ "${SKIP_SECRET_SCAN:-0}" != "0" && "$SCAN_ALL" -eq 0 ]]; then
+  echo "pre-commit: ⚠ SKIP_SECRET_SCAN 已设置，本次跳过密钥扫描。" >&2
+  echo "pre-commit:   请确认这是有意为之，并在提交后立即轮换任何已泄露的密钥。" >&2
+  exit 0
+fi
+
+# ------------------------------------------------------------------------------
+# 文件名红旗（命中即拒绝，不看内容）
+# ------------------------------------------------------------------------------
+FILE_PATTERNS=(
+  '.env' '.env.*' '*.env'
+  '*.pem' '*.key' '*.p8' '*.p12' '*.pfx' '*.jks' '*.keystore' '*.ppk'
+  'id_rsa*' 'id_dsa*' 'id_ecdsa*' 'id_ed25519*'
+  '.npmrc' '.pnpmrc' '.yarnrc' '.netrc' '_netrc' '.git-credentials' '.htpasswd'
+  '*.token' '*.secret'
+  '*secret*.json' '*secrets*.json' '*credential*.json' '*credentials*.json'
+  '*apikey*.json' '*api-key*.json' '*api_key*.json'
+  'service-account*.json' '*-service-account.json'
+  'cookies.txt' 'cookies.json' 'storage-state.json'
+  'auth.json' 'secrets.json' 'credentials.json'
+)
+FILE_EXCEPTIONS=( '*.example' '*.sample' '*.template' '*.dist' '*.md' )
+
+# ------------------------------------------------------------------------------
+# allowlist：只解析 path 规则（match 规则由 scan.awk 处理）
+# ------------------------------------------------------------------------------
+ALLOW_PATHS=()
+load_allowlist() {
+  [[ -f "$ALLOWLIST_FILE" ]] || return 0
+  local raw line
+  while IFS= read -r raw; do
+    line="${raw%%#*}"
+    line="$(printf '%s' "$line" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+    [[ -z "$line" ]] && continue
+    case "$line" in
+      "path "*) ALLOW_PATHS+=("${line#path }") ;;
+    esac
+  done < "$ALLOWLIST_FILE"
+}
+
+path_allowed() {
+  local f="$1" pat
+  for pat in ${ALLOW_PATHS[@]+"${ALLOW_PATHS[@]}"}; do
+    # shellcheck disable=SC2254
+    case "$f" in $pat) return 0 ;; esac
+  done
+  return 1
+}
+
+file_name_blocked() {
+  local base="$1" p
+  for p in "${FILE_EXCEPTIONS[@]}"; do
+    # shellcheck disable=SC2254
+    case "$base" in $p) return 1 ;; esac
+  done
+  for p in "${FILE_PATTERNS[@]}"; do
+    # shellcheck disable=SC2254
+    case "$base" in $p) return 0 ;; esac
+  done
+  return 1
+}
+
+mask() {                       # 只暴露前 4 字符 + 长度
+  local s="$1"
+  local n=${#s}
+  if (( n <= 8 )); then printf '%s…(%d字符)' "${s:0:2}" "$n"
+  else printf '%s…(%d字符)' "${s:0:4}" "$n"; fi
+}
+
+# ------------------------------------------------------------------------------
+# 待扫描文件 / 内容
+# ------------------------------------------------------------------------------
+collect_target_files() {
+  if (( SCAN_ALL == 1 )); then
+    git ls-files -z
+  else
+    git diff --cached --name-only --diff-filter=ACMR -z
+  fi
+}
+
+file_added_lines() {           # 输出 "行号<TAB>内容"
+  local f="$1"
+  if (( SCAN_ALL == 1 )); then
+    awk '{ printf "%d\t%s\n", NR, $0 }' "$f"
+    return 0
+  fi
+  git diff --cached -U0 --diff-filter=ACMR -- "$f" | awk '
+    /^@@/     { match($0, /\+[0-9]+/); ln = substr($0, RSTART + 1, RLENGTH - 1) + 0; next }
+    /^\+\+\+/ { next }
+    /^\+/     { printf "%d\t%s\n", ln, substr($0, 2); ln++; next }
+  '
+}
+
+# ------------------------------------------------------------------------------
+# 主扫描
+# ------------------------------------------------------------------------------
+load_allowlist
+
+TMP_STREAM="$(mktemp "${TMPDIR:-/tmp}/dsh-secret-scan.XXXXXX")" || {
+  echo "pre-commit: 无法创建临时文件，跳过扫描。" >&2
+  exit 0
+}
+TMP_ERR="$(mktemp "${TMPDIR:-/tmp}/dsh-secret-err.XXXXXX")" || TMP_ERR=/dev/null
+trap 'rm -f "$TMP_STREAM" "$TMP_ERR"' EXIT
+
+FINDINGS=0
+SCANNED_FILES=0
+SCANNED_LINES=0
+SCANNER_ERROR=0
+SCANNER_ERROR_MSG=""
+REPORT=""
+
+add_finding() {                # 路径 行号 规则 命中文本
+  FINDINGS=$((FINDINGS + 1))
+  REPORT+="  ✖ [$3] $1:$2  →  $(mask "$4")"$'\n'
+}
+
+while IFS= read -r -d '' f; do
+  [[ -z "$f" ]] && continue
+  path_allowed "$f" && continue
+
+  base="${f##*/}"
+  if file_name_blocked "$base"; then
+    FINDINGS=$((FINDINGS + 1))
+    REPORT+="  ✖ [sensitive-filename] ${f}  →  文件名即属凭据/密钥类，禁止提交"$'\n'
+    continue
+  fi
+
+  if (( SCAN_ALL == 0 )); then
+    numstat="$(git diff --cached --numstat -- "$f" 2>/dev/null | head -1)"
+    [[ "$numstat" == -*$'\t'-* ]] && continue          # 二进制文件跳过内容扫描
+  else
+    [[ -s "$f" ]] || continue
+    grep -qI . "$f" 2>/dev/null || continue            # 非文本跳过
+  fi
+
+  SCANNED_FILES=$((SCANNED_FILES + 1))
+
+  file_added_lines "$f" > "$TMP_STREAM"
+  SCANNED_LINES=$((SCANNED_LINES + $(wc -l < "$TMP_STREAM")))
+
+  awk_out="$(awk -v fname="$f" \
+                  -v allowlist_file="$ALLOWLIST_FILE" \
+                  -v entropy_min="$ENTROPY_MIN" \
+                  -f "$SCAN_AWK" "$TMP_STREAM" 2>"$TMP_ERR")"
+  awk_rc=$?
+  if (( awk_rc != 0 )) || [[ -s "$TMP_ERR" ]]; then
+    # 扫描器故障必须「失败即阻止」，否则错误规则会让密钥静默漏过
+    SCANNER_ERROR=1
+    SCANNER_ERROR_MSG+="  ✖ [scanner-error] ${f} (awk exit=${awk_rc})"$'\n'
+    SCANNER_ERROR_MSG+="$(head -5 "$TMP_ERR" | sed 's/^/      /')"$'\n'
+  fi
+  : > "$TMP_ERR"
+
+  while IFS=$'\t' read -r hit_file hit_line hit_rule hit_text; do
+    [[ -z "${hit_rule:-}" ]] && continue
+    add_finding "$hit_file" "$hit_line" "$hit_rule" "$hit_text"
+  done <<< "$awk_out"
+done < <(collect_target_files)
+
+# ------------------------------------------------------------------------------
+# 可选：叠加 gitleaks（已安装时）
+# ------------------------------------------------------------------------------
+GITLEAKS_STATUS=""
+if command -v gitleaks >/dev/null 2>&1 && (( SCAN_ALL == 0 )); then
+  gl_args=(--redact --no-banner)
+  [[ -f "$GITLEAKS_CONFIG" ]] && gl_args+=(--config "$GITLEAKS_CONFIG")
+  run_gitleaks() { "$@" 2>&1; }
+  if gl_out="$(run_gitleaks gitleaks git --staged "${gl_args[@]}")"; then
+    GITLEAKS_STATUS="gitleaks: 通过"
+  elif printf '%s' "$gl_out" | grep -qiE 'unknown command|unrecognized|unknown flag'; then
+    if gl_out="$(run_gitleaks gitleaks protect --staged "${gl_args[@]}")"; then
+      GITLEAKS_STATUS="gitleaks: 通过 (protect 模式)"
+    else
+      FINDINGS=$((FINDINGS + 1))
+      GITLEAKS_STATUS="gitleaks: 发现疑似密钥"
+      REPORT+="  ✖ [gitleaks] 以下为其脱敏输出："$'\n'"$(printf '%s\n' "$gl_out" | sed 's/^/      /' | head -20)"$'\n'
+    fi
+  else
+    FINDINGS=$((FINDINGS + 1))
+    GITLEAKS_STATUS="gitleaks: 发现疑似密钥"
+    REPORT+="  ✖ [gitleaks] 以下为其脱敏输出："$'\n'"$(printf '%s\n' "$gl_out" | sed 's/^/      /' | head -20)"$'\n'
+  fi
+elif (( SCAN_ALL == 0 )); then
+  GITLEAKS_STATUS="gitleaks: 未安装（本次仅用内置规则）"
+fi
+
+# ------------------------------------------------------------------------------
+# 输出
+# ------------------------------------------------------------------------------
+if (( SCANNER_ERROR > 0 )); then
+  {
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════════════╗"
+    echo "║  ⛔ 提交被阻止：密钥扫描器本身报错（失败即阻止，避免静默漏检）"
+    echo "╚══════════════════════════════════════════════════════════════════════╝"
+    printf '%s' "$SCANNER_ERROR_MSG"
+    echo ""
+    echo "  常见原因：.githooks/allowlist.txt 里的 match 正则不合法。"
+    echo "  自检：bash .githooks/pre-commit --scan-all"
+  } >&2
+  exit 1
+fi
+
+if (( FINDINGS > 0 )); then
+  {
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════════════╗"
+    echo "║  ⛔ 提交被阻止：检测到 ${FINDINGS} 处疑似密钥 / 凭据 / 敏感文件"
+    echo "╚══════════════════════════════════════════════════════════════════════╝"
+    printf '%s' "$REPORT"
+    echo ""
+    echo "  已扫描：${SCANNED_FILES} 个文件 / ${SCANNED_LINES} 行"
+    [[ -n "$GITLEAKS_STATUS" ]] && echo "  ${GITLEAKS_STATUS}"
+    echo ""
+    echo "  修复方式："
+    echo "    1) 删除文件中的密钥，改用环境变量或未跟踪的本地配置；"
+    echo "    2) 确属误报：在该行加注释  secret-scan:allow ，"
+    echo "       或在 .githooks/allowlist.txt 增加精确豁免；"
+    echo "    3) 若该密钥曾提交过：必须立即轮换，并用 git filter-repo 清洗历史。"
+    echo ""
+    echo "  仅本次跳过（谨慎）：SKIP_SECRET_SCAN=1 git commit ..."
+    echo "  完整说明：.githooks/README.md"
+    echo ""
+  } >&2
+  exit 1
+fi
+
+if (( SCAN_ALL == 1 )); then
+  echo "pre-commit: ✅ 全仓库扫描通过（${SCANNED_FILES} 个文件 / ${SCANNED_LINES} 行）"
+else
+  echo "pre-commit: ✅ 密钥扫描通过（${SCANNED_FILES} 个文件 / ${SCANNED_LINES} 行新增）"
+  [[ -n "$GITLEAKS_STATUS" ]] && echo "pre-commit:    ${GITLEAKS_STATUS}"
+fi
+exit 0

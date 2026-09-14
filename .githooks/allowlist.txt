@@ -1,0 +1,36 @@
+# ==============================================================================
+# .githooks/allowlist.txt  —  pre-commit 密钥扫描豁免清单
+#
+# 格式（每行一条，# 之后为注释，行首/行尾空白忽略）：
+#   path  <shell 通配符>   跳过整个文件（注意：* 也会匹配 / ，可跨目录）
+#   match <ERE 正则>       跳过「命中行」符合该正则的告警
+#
+# 原则：只做**最小必要**豁免。优先用 match 精确豁免，避免整文件放行。
+# 修改本文件会被人看到，因此它本身已被豁免扫描（见下方 path 规则）。
+# ==============================================================================
+
+# --- 扫描器自身与配置：包含大量正则字面量，必然自匹配 ---
+path .githooks/**
+path .gitleaks.toml
+path .gitignore
+
+# --- 模板/示例文件：只放占位符，不放真实密钥 ---
+path *.example
+path *.sample
+path *.template
+path *.dist
+path *.env.example
+
+# --- 明确标注为占位符/文档示例的值 ---
+#
+# 注意：占位符判定（example / placeholder / changeme / xxxx / <...> 等）已经内置在
+# scan.awk 中，并且是「值级」判定——只有被命中的那段值本身是占位符才放过。
+# 这里刻意不放行「整行含 example 就跳过」，否则任何一行只要带 example 字样
+# 就会成为盲区（AWS 官方示例键 AKIAIOSFODNN7EXAMPLE 正是这种情况）。
+
+# --- 文档中用于说明格式的代码块（如 README 里写 "Authorization: Bearer <token>"）---
+match (authorization|x-api-key)["'\'']?[[:space:]]*[:=][[:space:]]*["'\'']?[[:space:]]*(bearer[[:space:]]+)?(<|\$\{|\$\(|%s|\*{3,})
+
+# --- 本仓库已知的非敏感内容（如需要请在此追加，并写清原因）---
+# path Software/dsh-webchat-entry/src/client.js
+# match (?i)sessionStorage\.getItem\((["'\''])[a-z_-]+\1\)
