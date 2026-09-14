@@ -54,7 +54,7 @@ fi
 # has schemastery; link the installation copy otherwise.
 if [[ ! -e "$PROFILE_DIR/node_modules/@deepseek-ai/schemastery" ]]; then
   SCHEMASTERY="$(node -e "console.log(require.resolve('@deepseek-ai/schemastery/package.json'))" 2>/dev/null \
-    || echo /home/user/.npm-global/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/schemastery/package.json)"
+    || echo "$HOME/.npm-global/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/schemastery/package.json")"
   if [[ -f "$SCHEMASTERY" ]]; then
     mkdir -p "$PROFILE_DIR/node_modules/@deepseek-ai"
     ln -sfn "$(dirname "$SCHEMASTERY")" "$PROFILE_DIR/node_modules/@deepseek-ai/schemastery"
