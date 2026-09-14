@@ -4,9 +4,9 @@ DSH Web 的「插件变更 → 重启确认栏」插件。当 profile 发生变�
 或手动编辑 profile 的 `package.json` / `cordis.patch.yml`）时，页面顶部弹出确认栏，让用户
 选择**立即重启**或**稍后**，而不是在背后静默断线。
 
-功能与 [`ExtraZC/dsh-plugins/dsh-restart-confirm`](https://github.com/ExtraZC/dsh-plugins/tree/main/dsh-restart-confirm)
-一致，按本机 DSH `0.1.5-rc.1` 的插件 API 重新实现，并且**不再依赖仓库外的手写 systemd
-单元与 `restart-with-confirm.sh`**（见下文「与上游实现的差异」）。
+功能与上游基于 systemd 的实现一致，按本机 DSH `0.1.5-rc.1` 的插件 API 重新实现，
+并且**不再依赖仓库外的手写 systemd 单元与 `restart-with-confirm.sh`**
+（见下文「与上游实现的差异」）。
 
 ## 工作原理
 
@@ -166,3 +166,7 @@ curl -s -X POST http://127.0.0.1:30500/__restart-confirm/respond \
 判断某个修复是否已经在运行中的进程里生效，最直接的办法是看接口输出而不是看文件：例如确认
 host 的截止时间修复，可以连续两次轮询 `/__restart-confirm/state`，比较两次的 `autoRestartAt`
 是否**完全相同**（相同＝已生效）。
+
+## License
+
+MIT
