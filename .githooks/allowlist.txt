@@ -10,7 +10,12 @@
 # ==============================================================================
 
 # --- 扫描器自身与配置：包含大量正则字面量，必然自匹配 ---
-path .githooks/**
+# 注意：这里逐个文件豁免，而**不是**整个 .githooks/ 目录。
+# 整目录豁免会让 README.md / install.sh 这类文件变成永不被扫的盲区，
+# 连真密钥藏进去也不会告警。只豁免确实含正则字面量的那几个文件。
+path .githooks/scan.awk
+path .githooks/allowlist.txt
+path .githooks/pre-commit
 path .gitleaks.toml
 path .gitignore
 
@@ -26,7 +31,7 @@ path *.env.example
 # 注意：占位符判定（example / placeholder / changeme / xxxx / <...> 等）已经内置在
 # scan.awk 中，并且是「值级」判定——只有被命中的那段值本身是占位符才放过。
 # 这里刻意不放行「整行含 example 就跳过」，否则任何一行只要带 example 字样
-# 就会成为盲区（AWS 官方示例键 AKIAIOSFODNN7EXAMPLE 正是这种情况）。
+# 就会成为盲区（厂商文档公开的示例键 AKIA…EXAMPLE 正是这种情况）。
 
 # --- 文档中用于说明格式的代码块（如 README 里写 "Authorization: Bearer <token>"）---
 match (authorization|x-api-key)["'\'']?[[:space:]]*[:=][[:space:]]*["'\'']?[[:space:]]*(bearer[[:space:]]+)?(<|\$\{|\$\(|%s|\*{3,})

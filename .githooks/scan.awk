@@ -125,7 +125,7 @@ function is_non_secret_value(v,    lv) {
             }
             if (hit == "") continue
             # 格式类规则也要放过明显的占位符值，
-            # 例如 AWS 官方文档里的 AKIAIOSFODNN7EXAMPLE。
+            # 例如厂商文档里公开的示例键（形如 AKIA…EXAMPLE，中间是省略号占位）。
             # 注意：这是「值级」判定，绝不会因为整行出现 "example" 就放过该行。
             if (is_obvious_placeholder(hit)) continue
         }

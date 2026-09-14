@@ -45,8 +45,11 @@ Shannon 熵 ≥ 3.2 的字面量。
 那种宽松规则会让任何带 example 字样的行变成盲区。因此：
 
 - `const k = "your_api_key_here";` → 放行（值是占位符）
-- `const k = "AKIAIOSFODNN7EXAMPLE";` → 放行（AWS 官方文档示例键，值级豁免）
-- `const k = "AKIA3XQ7ZP2LMN4VW6YT";` → **拦截**（真实样式的键，即使同一行还有别的词）
+- 厂商文档公开的示例键（`AKIA…EXAMPLE`，中间为省略号）→ 放行（值级占位符豁免）
+- 换成真实样式的随机键（`AKIA` + 16 位大写字母数字）→ **拦截**，即使同一行还有别的词
+
+> 本文档刻意不写完整的示例键字符串：完整的 AWS 形态字符串会被 GitHub secret
+> scanning 等外部扫描器标成告警噪音，而这里只是说明规则，不需要可复制的真值。
 
 ### 扫描器故障 = 失败即阻止（fail-closed）
 
