@@ -1,0 +1,257 @@
+# ==============================================================================
+# .gitignore  —  仓库根目录：/home/user/DSH
+#
+# 目标：阻止「个人敏感信息 / API Key / 密钥 / 凭据 / 本地环境状态」进入版本库。
+#
+# ⚠️ 重要限制（请务必阅读）
+#   .gitignore 只能排除 **整个文件或整个目录**，
+#   它 **无法** 删除已经写在某个被跟踪文件「内部」的密钥文本。
+#   若某个 .js/.sh/.md 里内嵌了密钥，必须手动改写该文件（或用
+#   git-filter-repo / BFG 清洗历史），.gitignore 不能代劳。
+#   本仓库当前扫描结果：未发现硬编码密钥字面量（详见交付说明）。
+# ==============================================================================
+
+
+# ------------------------------------------------------------------------------
+# 1. 环境变量 / 配置文件（最常见的密钥存放处）
+# ------------------------------------------------------------------------------
+.env
+.env.*
+.envrc
+*.env
+!.env.example
+!.env.sample
+!.env.template
+!.env.dist
+
+
+# ------------------------------------------------------------------------------
+# 2. 密钥、证书、私钥文件
+# ------------------------------------------------------------------------------
+*.pem
+*.key
+*.keys
+*.p8
+*.p12
+*.pfx
+*.pkcs12
+*.jks
+*.keystore
+*.truststore
+*.crt
+*.cer
+*.der
+*.csr
+*.gpg
+*.asc
+*.ppk
+*.ovpn
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+*.pub
+
+
+# ------------------------------------------------------------------------------
+# 3. 凭据 / 令牌 / 云平台与包管理器鉴权文件
+# ------------------------------------------------------------------------------
+.npmrc
+.pnpmrc
+.yarnrc
+.yarnrc.yml
+.nvmrc.local
+.netrc
+_netrc
+.git-credentials
+.gitconfig.local
+.htpasswd
+.authinfo
+.terraformrc
+*.token
+*.secret
+*-token.json
+*-secret.json
+*-credentials.json
+token.json
+secrets.json
+secret.json
+credentials.json
+auth.json
+.aws/
+.ssh/
+.gnupg/
+.kube/
+.docker/config.json
+config/secrets.*
+config/credentials.*
+service-account*.json
+*-service-account.json
+
+
+# ------------------------------------------------------------------------------
+# 4. 文件名即含敏感语义的导出/备份（防止误提交 dump）
+# ------------------------------------------------------------------------------
+*secret*.json
+*secrets*.json
+*credential*.json
+*credentials*.json
+*apikey*.json
+*api-key*.json
+*api_key*.json
+*password*.json
+*passwd*.json
+*.local
+*.local.*
+local.settings.json
+appsettings.*.json
+appsettings.local.json
+
+
+# ------------------------------------------------------------------------------
+# 5. DSH / 本机运行时状态与个人信息（会话、Profile、Cookie、URL 导出）
+# ------------------------------------------------------------------------------
+.dsh/
+profiles/
+profile/
+session*.json
+*.session.json
+*-session.json
+sessions/
+auth/
+cookies.txt
+cookies.json
+storage-state.json
+*.host_tojson.txt
+*_tojson.txt
+.host_tojson.txt
+.bundled_tojson.txt
+host_tojson.txt
+bundled_tojson.txt
+
+
+# ------------------------------------------------------------------------------
+# 6. 本仓库已知的工具缓存目录（含 5MB+ npm 缓存与二进制 tgz，无需入库）
+# ------------------------------------------------------------------------------
+Software/.tooling/
+*.tgz
+*.tar.gz
+*.tar.bz2
+*.zip
+
+
+# ------------------------------------------------------------------------------
+# 7. 临时/草稿文件（本仓库已存在的空草稿）
+# ------------------------------------------------------------------------------
+Software/b1.txt
+Software/b2.txt
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+tmp/
+temp/
+.tmp/
+
+
+# ------------------------------------------------------------------------------
+# 8. 依赖目录
+# ------------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/cache/
+.yarn/install-state.gz
+.yarn/build-state.yml
+jspm_packages/
+bower_components/
+vendor/
+
+
+# ------------------------------------------------------------------------------
+# 9. 构建产物 / 缓存（当前项目 lib/ 为发布产物，故不默认忽略）
+# ------------------------------------------------------------------------------
+dist/
+build/
+out/
+coverage/
+.nyc_output/
+.cache/
+.parcel-cache/
+.turbo/
+.nx/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.npmcache/
+_cacache/
+.npm-cache/
+# 如需忽略这两个插件包的构建输出，取消下一行注释：
+# Software/*/lib/
+
+
+# ------------------------------------------------------------------------------
+# 10. 数据库 / 本地数据文件
+# ------------------------------------------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.mdb
+*.sql.gz
+*.dump
+
+
+# ------------------------------------------------------------------------------
+# 11. 编辑器 / IDE
+# ------------------------------------------------------------------------------
+.idea/
+.vscode/
+!.vscode/extensions.json
+.history/
+*.code-workspace
+*.sublime-workspace
+*.sublime-project
+.project
+.classpath
+.settings/
+
+
+# ------------------------------------------------------------------------------
+# 12. 操作系统垃圾文件
+# ------------------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+
+# ------------------------------------------------------------------------------
+# 13. 其他：压缩包/日志之外的本机绑定信息
+# ------------------------------------------------------------------------------
+*.pid
+*.seed
+*.pid.lock
+*.heapsnapshot
+*.cpuprofile

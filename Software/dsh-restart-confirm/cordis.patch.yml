@@ -1,0 +1,15 @@
+# dsh-restart-confirm bundle layer: confirmation bar before the restart that a
+# profile change (dsh plugin add/remove/update) requires. The row id stays
+# stable so re-adds and profile patches can target it.
+#
+# Optional row config (all fields have defaults):
+#   autoRestartSec: 180            # 0 disables the automatic restart
+#   watch: true                    # set false to only expose the manual button
+#   profileDir: /path/to/profile   # auto-detected from the plugin location
+#   restartMode: process-exit      # or: command
+#   restartCommand: systemctl      # used when restartMode is command
+#   restartArgs: [restart, dsh.service]
+#   exitDelayMs: 400
+- insert:
+    - id: restart-confirm
+      name: dsh-restart-confirm

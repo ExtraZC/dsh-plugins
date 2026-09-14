@@ -1,0 +1,51 @@
+{
+  "name": "dsh-restart-confirm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Restart confirmation bar for the DSH web service: when the running profile changes (plugin add/update/remove), the page asks before the service restarts instead of disconnecting silently.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "restart",
+    "confirm"
+  ],
+  "files": [
+    "src/",
+    "lib/",
+    "cordis.patch.yml"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "node --experimental-vm-modules scripts/build.mjs",
+    "check": "node --experimental-vm-modules scripts/build.mjs --check",
+    "test": "node --experimental-vm-modules scripts/test-host.mjs"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.2"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "external": [
+        "react",
+        "react/jsx-runtime"
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+# dsh-webchat-entry bundle layer: the sidebar footer action that opens
+# chat.deepseek.com in a new browser tab. The row id stays stable so re-adds and
+# profile patches can target it.
+#
+# No row config: the entry is a pure client surface. Visibility is controlled by
+# the durable `dsh-webchat-entry.showEntry` setting (Settings -> General, or
+# `~/.dsh/settings.yaml`), not by this patch row.
+- insert:
+    - id: webchat-entry
+      name: dsh-webchat-entry
