@@ -1,6 +1,6 @@
 # dsh-plugins
 
-[DSH（DeepSeek Harness）](https://github.com/deepseek-ai/dsh) 插件集合。每个插件位于独立目录，
+DSH（DeepSeek Harness）插件集合。每个插件位于独立目录，
 各自维护完整的 `README.md`、源码、构建与安装脚本。
 
 面向 **DSH `0.1.5-rc.1`**（`web` profile）编写并实测 · Node ≥ 20 · MIT
